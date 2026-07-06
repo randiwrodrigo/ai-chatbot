@@ -1,3 +1,5 @@
+import MessageInput from "./MessageInput";
+
 export default function Chat() {
   return (
     <main className="flex h-screen flex-col bg-black text-white">
@@ -13,7 +15,7 @@ export default function Chat() {
 
       {/* Input */}
       <footer className="border-t border-zinc-800 p-4">
-        {/* Input will go here */}
+        <MessageInput />
       </footer>
     </main>
   );
