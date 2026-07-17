@@ -1,5 +1,6 @@
 import { google } from "@/lib/ai";
-import { generateText } from "ai";
+import { generateText  } from "ai";
+import test from "node:test";
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +20,6 @@ export async function POST(request: Request) {
       prompt: message,
     });
 
-    // Return the AI response
     return Response.json({
       message: text,
     });
