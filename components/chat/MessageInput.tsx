@@ -4,17 +4,21 @@ import { useState } from "react";
 
 interface MessageInputProps {
   onSend: (message: string) => void;
+  isLoading: boolean;
 }
 
-export default function MessageInput({ onSend }: MessageInputProps) {
+export default function MessageInput({
+  onSend,
+  isLoading,
+}: MessageInputProps)  {
   const [message, setMessage] = useState("");
 
   function handleSend() {
-    if (!message.trim()) return;
+      if (!message.trim() || isLoading) return;
 
-    onSend(message);
+      onSend(message);
 
-    setMessage("");
+      setMessage("");
   }
 
   return (
@@ -30,13 +34,19 @@ export default function MessageInput({ onSend }: MessageInputProps) {
           }
         }}
         className="flex-1 bg-transparent text-white placeholder:text-zinc-500 outline-none"
+        disabled={isLoading}
       />
 
       <button
         onClick={handleSend}
-        className="rounded-full bg-white px-4 py-2 text-sm font-medium text-black transition hover:bg-zinc-200"
+        className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+        isLoading
+          ? "bg-zinc-600 text-zinc-300 cursor-not-allowed"
+          : "bg-white text-black hover:bg-zinc-200"
+        }`}
+        disabled={isLoading}
       >
-        Send
+        {isLoading ? "Thinking..." : "Send"}
       </button>
     </div>
   );
