@@ -1,80 +1,65 @@
-
 "use client";
 
 import { useState } from "react";
+import { useChat } from "@ai-sdk/react";
+import Sidebar from "@/components/layout/Sidebar";
 import MessageInput from "./MessageInput";
 import MessageList from "./MessageList";
-import { Message } from "@/types/chat";
-
 
 export default function Chat() {
+  const { messages, sendMessage, status } = useChat();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isLoading = status === "submitted" || status === "streaming";
 
-
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  async function handleSend(content: string) {
-    try {
-      setIsLoading(true);
-      const newMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "user",
-        content,
-      };
-
-      setMessages((prev) => [...prev, newMessage]);
-
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: content,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to send message");
-      }
-
-      const data = await response.json();
-
-      const botMessage: Message = {
-        id: crypto.randomUUID(),
-        role: "assistant",
-        content: data.message,
-      };
-
-      setMessages((prev) => [...prev, botMessage]);
-
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setIsLoading(false);
-    }
+  function handleSend(content: string) {
+    sendMessage({ text: content });
   }
-  
-    return (
-      <main className="flex h-screen flex-col bg-black text-white">
-        {/* Header */}
-        <header className="h-16 border-b border-zinc-800 px-6 flex items-center">
-          <h1 className="text-2xl font-semibold">Chabot</h1>
-        </header>
 
-        {/* Messages */}
-        <section className="flex-1 overflow-y-auto">
-          <MessageList messages={messages} />
-        </section>
+  return (
+    <main className="flex h-screen flex-col bg-black text-white">
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-        {/* Input */}
-        <footer className="border-t border-zinc-800 p-4">
-          <MessageInput
-            onSend={handleSend}
-            isLoading={isLoading}
-          />
-        </footer>
-      </main>
-    ); 
+      <header className="h-16 border-b border-zinc-800 px-4 flex items-center gap-2">
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          aria-label="Open sidebar"
+          className="rounded-lg p-2 text-zinc-300 hover:bg-zinc-800"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-5 w-5"
+          >
+            <rect x="3" y="4" width="18" height="16" rx="2" />
+            <line x1="9.5" y1="4" x2="9.5" y2="20" />
+          </svg>
+        </button>
+        <h1 className="text-2xl font-semibold">Chabot</h1>
+      </header>
 
+      {messages.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4">
+          <p className="text-2xl font-medium">Ask me anything</p>
+          <div className="w-full max-w-4xl">
+            <MessageInput onSend={handleSend} isLoading={isLoading} />
+          </div>
+        </div>
+      ) : (
+        <>
+          <section className="flex-1 overflow-y-auto">
+            <MessageList messages={messages} />
+          </section>
+
+          <footer className="border-t border-zinc-800 p-4">
+            <MessageInput onSend={handleSend} isLoading={isLoading} />
+          </footer>
+        </>
+      )}
+    </main>
+  );
 }

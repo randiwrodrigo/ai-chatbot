@@ -1,39 +1,13 @@
 import { google } from "@/lib/ai";
-import { generateText  } from "ai";
-import test from "node:test";
+import { convertToModelMessages, streamText, UIMessage } from "ai";
 
 export async function POST(request: Request) {
-  try {
-    // Get the user's message from the request body
-    const { message } = await request.json();
+  const { messages }: { messages: UIMessage[] } = await request.json();
 
-    if (!message?.trim()) {
-        return Response.json(
-            { error: "Message is required." },
-            { status: 400 }
-        );
-    }
+  const result = streamText({
+    model: google("gemini-2.5-flash"),
+    messages: await convertToModelMessages(messages),
+  });
 
-    // Generate a response from Gemini
-    const { text } = await generateText({
-      model: google("gemini-2.5-flash"),
-      prompt: message,
-    });
-
-    return Response.json({
-      message: text,
-    });
-
-  } catch (error) {
-    console.error(error);
-
-    return Response.json(
-      {
-        error: "Something went wrong.",
-      },
-      {
-        status: 500,
-      }
-    );
-  }
+  return result.toUIMessageStreamResponse();
 }

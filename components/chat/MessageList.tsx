@@ -1,11 +1,11 @@
 "use client";
 
-import { Message as MessageType } from "@/types/chat";
+import { UIMessage } from "ai";
 import { useEffect, useRef } from "react";
 import Message from "./Message";
 
 interface MessageListProps {
-  messages: MessageType[];
+  messages: UIMessage[];
 }
 
 export default function MessageList({ messages }: MessageListProps) {
@@ -15,7 +15,7 @@ export default function MessageList({ messages }: MessageListProps) {
       behavior: "smooth",
     });
   }, [messages]);
-  
+
   return (
     <div className="mx-auto w-full max-w-4xl p-6">
       {messages.map((message) => (
