@@ -1,11 +1,15 @@
-import { google } from "@/lib/ai";
+import { models } from "@/lib/ai";
+import { DEFAULT_MODEL, isModelId } from "@/lib/models";
 import { convertToModelMessages, streamText, UIMessage } from "ai";
 
 export async function POST(request: Request) {
-  const { messages }: { messages: UIMessage[] } = await request.json();
+  const { messages, model }: { messages: UIMessage[]; model?: string } =
+    await request.json();
+
+  const modelId = isModelId(model) ? model : DEFAULT_MODEL;
 
   const result = streamText({
-    model: google("gemini-2.5-flash"),
+    model: models[modelId],
     messages: await convertToModelMessages(messages),
   });
 

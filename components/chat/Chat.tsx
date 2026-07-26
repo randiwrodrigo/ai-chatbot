@@ -3,16 +3,18 @@
 import { useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import Sidebar from "@/components/layout/Sidebar";
+import { DEFAULT_MODEL, type ModelId } from "@/lib/models";
 import MessageInput from "./MessageInput";
 import MessageList from "./MessageList";
 
 export default function Chat() {
   const { messages, sendMessage, status } = useChat();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [model, setModel] = useState<ModelId>(DEFAULT_MODEL);
   const isLoading = status === "submitted" || status === "streaming";
 
   function handleSend(content: string) {
-    sendMessage({ text: content });
+    sendMessage({ text: content }, { body: { model } });
   }
 
   return (
@@ -39,14 +41,19 @@ export default function Chat() {
             <line x1="9.5" y1="4" x2="9.5" y2="20" />
           </svg>
         </button>
-        <h1 className="text-2xl font-semibold">Chabot</h1>
+        <h1 className="text-2xl font-semibold">Chatbot</h1>
       </header>
 
       {messages.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4">
           <p className="text-2xl font-medium">Ask me anything</p>
           <div className="w-full max-w-4xl">
-            <MessageInput onSend={handleSend} isLoading={isLoading} />
+            <MessageInput
+              onSend={handleSend}
+              isLoading={isLoading}
+              model={model}
+              onModelChange={setModel}
+            />
           </div>
         </div>
       ) : (
@@ -56,7 +63,12 @@ export default function Chat() {
           </section>
 
           <footer className="border-t border-zinc-800 p-4">
-            <MessageInput onSend={handleSend} isLoading={isLoading} />
+            <MessageInput
+              onSend={handleSend}
+              isLoading={isLoading}
+              model={model}
+              onModelChange={setModel}
+            />
           </footer>
         </>
       )}

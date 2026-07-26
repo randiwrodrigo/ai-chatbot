@@ -1,15 +1,21 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import type { ModelId } from "@/lib/models";
+import ModelSelector from "./ModelSelector";
 
 interface MessageInputProps {
   onSend: (message: string) => void;
   isLoading: boolean;
+  model: ModelId;
+  onModelChange: (id: ModelId) => void;
 }
 
 export default function MessageInput({
   onSend,
   isLoading,
+  model,
+  onModelChange,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -48,6 +54,8 @@ export default function MessageInput({
         className="max-h-40 flex-1 resize-none bg-transparent text-white placeholder:text-zinc-500 outline-none"
         disabled={isLoading}
       />
+
+      <ModelSelector value={model} onChange={onModelChange} />
 
       <button
         onClick={handleSend}
