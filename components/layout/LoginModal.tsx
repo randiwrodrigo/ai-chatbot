@@ -29,11 +29,11 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
     <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
       <div onClick={onClose} className="fixed inset-0 bg-black/70" />
 
-      <div className="relative w-full max-w-md rounded-2xl bg-zinc-900 p-8">
+      <div className="relative w-full max-w-md rounded-2xl bg-bg-100 p-8">
         <button
           onClick={onClose}
           aria-label="Close login dialog"
-          className="absolute right-4 top-4 rounded-lg p-1 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+          className="absolute right-4 top-4 rounded-lg p-1 text-text-400 hover:bg-bg-200 hover:text-text-100"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -50,10 +50,10 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
           </svg>
         </button>
 
-        <h2 className="text-center text-2xl font-semibold text-white">
+        <h2 className="text-center text-2xl font-semibold text-text-100">
           Log in or sign up
         </h2>
-        <p className="mt-3 text-center text-sm text-zinc-400">
+        <p className="mt-3 text-center text-sm text-text-400">
           You&apos;ll get smarter responses and can upload files, images, and
           more.
         </p>
@@ -64,7 +64,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
         <button
           onClick={handleGoogleSignIn}
-          className="mt-6 flex w-full items-center justify-center gap-3 rounded-full border border-zinc-700 py-3 font-medium text-white hover:bg-zinc-800"
+          className="mt-6 flex w-full items-center justify-center gap-3 rounded-full border border-bg-300 py-3 font-medium text-text-100 hover:bg-bg-200"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5">
             <path

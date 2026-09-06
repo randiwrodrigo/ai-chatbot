@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { ArrowUp, Loader2, Plus } from "lucide-react";
 import type { ModelId } from "@/lib/models";
 import ModelSelector from "./ModelSelector";
 
@@ -24,7 +25,7 @@ export default function MessageInput({
     const textarea = textareaRef.current;
     if (!textarea) return;
     textarea.style.height = "auto";
-    textarea.style.height = `${textarea.scrollHeight}px`;
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 240)}px`;
   }, [message]);
 
   function handleSend() {
@@ -42,32 +43,58 @@ export default function MessageInput({
     }
   }
 
+  const hasContent = message.trim().length > 0;
+
   return (
-    <div className="mx-auto flex w-full max-w-4xl items-end gap-3 rounded-3xl border border-zinc-700 bg-zinc-900 px-4 py-3">
-      <textarea
-        ref={textareaRef}
-        rows={1}
-        placeholder="Ask anything..."
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        onKeyDown={handleKeyDown}
-        className="max-h-40 flex-1 resize-none bg-transparent text-white placeholder:text-zinc-500 outline-none"
-        disabled={isLoading}
-      />
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
+      <div className="flex flex-col gap-2 rounded-3xl border border-bg-300 bg-bg-100 px-4 pb-3 pt-4 shadow-[0_4px_20px_rgba(0,0,0,0.25)] transition-shadow focus-within:shadow-[0_4px_24px_rgba(0,0,0,0.35)]">
+        <textarea
+          ref={textareaRef}
+          rows={1}
+          placeholder="How can I help you today?"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
+          className="max-h-60 w-full resize-none bg-transparent text-[16px] leading-relaxed text-text-100 outline-none placeholder:text-text-400"
+          disabled={isLoading}
+        />
 
-      <ModelSelector value={model} onChange={onModelChange} />
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            title="Attachments coming soon"
+            aria-label="Add attachment"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-text-400 transition-colors hover:bg-bg-200 hover:text-text-200"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
 
-      <button
-        onClick={handleSend}
-        className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
-          isLoading
-            ? "bg-zinc-600 text-zinc-300 cursor-not-allowed"
-            : "bg-white text-black hover:bg-zinc-200"
-        }`}
-        disabled={isLoading}
-      >
-        {isLoading ? "Thinking..." : "Send"}
-      </button>
+          <div className="flex items-center gap-2">
+            <ModelSelector value={model} onChange={onModelChange} />
+
+            <button
+              onClick={handleSend}
+              disabled={!hasContent || isLoading}
+              aria-label="Send message"
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                hasContent && !isLoading
+                  ? "bg-accent text-bg-0 hover:bg-accent-hover"
+                  : "bg-accent/30 text-bg-0/60"
+              }`}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowUp className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <p className="text-center text-xs text-text-500">
+        AI can make mistakes. Please check important information.
+      </p>
     </div>
   );
 }

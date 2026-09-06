@@ -34,7 +34,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-zinc-800 bg-black transition-transform duration-200 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-bg-300 bg-bg-0 transition-transform duration-200 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -42,7 +42,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           <button
             onClick={onClose}
             aria-label="Close sidebar"
-            className="rounded-lg p-2 text-zinc-300 hover:bg-zinc-800"
+            className="rounded-lg p-2 text-text-300 hover:bg-bg-200"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -60,13 +60,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-2 text-sm text-zinc-500">
+        <div className="flex-1 overflow-y-auto px-4 py-2 text-sm text-text-500">
           No conversations yet
         </div>
 
-        <div className="border-t border-zinc-800 p-4">
+        <div className="border-t border-bg-300 p-4">
           {user ? (
-            <div className="flex items-center gap-3 rounded-xl p-2 hover:bg-zinc-800">
+            <div className="flex items-center gap-3 rounded-xl p-2 hover:bg-bg-200">
               {user.photoURL ? (
                 <img
                   src={user.photoURL}
@@ -75,16 +75,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   className="h-9 w-9 shrink-0 rounded-full"
                 />
               ) : (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-700 text-sm font-semibold text-white">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg-300 text-sm font-semibold text-text-100">
                   {getInitials(user.displayName ?? user.email ?? "?")}
                 </div>
               )}
 
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-white">
+                <p className="truncate text-sm font-medium text-text-100">
                   {user.displayName ?? user.email}
                 </p>
-                <p className="truncate text-xs text-zinc-400">
+                <p className="truncate text-xs text-text-400">
                   {user.email}
                 </p>
               </div>
@@ -92,7 +92,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <button
                 onClick={() => signOut(auth)}
                 aria-label="Log out"
-                className="shrink-0 rounded-lg p-2 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+                className="shrink-0 rounded-lg p-2 text-text-400 hover:bg-bg-300 hover:text-text-100"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -111,17 +111,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               </button>
             </div>
           ) : (
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-4">
-              <p className="font-semibold text-white">
+            <div className="rounded-2xl border border-bg-300 bg-bg-100 p-4">
+              <p className="font-semibold text-text-100">
                 Get responses tailored to you
               </p>
-              <p className="mt-2 text-sm text-zinc-400">
+              <p className="mt-2 text-sm text-text-400">
                 Log in to get answers based on saved chats, plus create
                 images and upload files.
               </p>
               <button
                 onClick={() => setIsLoginOpen(true)}
-                className="mt-4 w-full rounded-full bg-zinc-700 py-3 font-medium text-white hover:bg-zinc-600"
+                className="mt-4 w-full rounded-full bg-accent py-3 font-medium text-bg-0 hover:bg-accent-hover"
               >
                 Log in
               </button>

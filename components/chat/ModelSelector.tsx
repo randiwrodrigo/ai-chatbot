@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Check, ChevronDown } from "lucide-react";
 import { AI_MODELS, type ModelId } from "@/lib/models";
 
 interface ModelSelectorProps {
@@ -10,68 +11,56 @@ interface ModelSelectorProps {
 
 export default function ModelSelector({ value, onChange }: ModelSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const selected = AI_MODELS.find((m) => m.id === value) ?? AI_MODELS[0];
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <div className="relative shrink-0">
+    <div className="relative shrink-0" ref={containerRef}>
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className="flex items-center gap-1 rounded-full border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:bg-zinc-800"
+        className={`flex items-center gap-1 rounded-xl px-3 py-1.5 text-sm font-medium transition-colors ${
+          isOpen
+            ? "bg-bg-200 text-text-100"
+            : "text-text-300 hover:bg-bg-200 hover:text-text-100"
+        }`}
       >
         {selected.label}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-4 w-4"
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        <ChevronDown
+          className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
 
       {isOpen && (
-        <>
-          <div
-            onClick={() => setIsOpen(false)}
-            className="fixed inset-0 z-10"
-          />
-          <div className="absolute bottom-full right-0 z-20 mb-2 w-48 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900 py-1 shadow-lg">
-            {AI_MODELS.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => {
-                  onChange(m.id);
-                  setIsOpen(false);
-                }}
-                className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-zinc-800 ${
-                  m.id === value ? "text-white" : "text-zinc-300"
-                }`}
-              >
-                {m.label}
-                {m.id === value && (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="h-4 w-4"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                )}
-              </button>
-            ))}
-          </div>
-        </>
+        <div className="absolute bottom-full left-0 z-20 mb-2 w-56 overflow-hidden rounded-2xl border border-bg-300 bg-bg-100 p-1.5 shadow-2xl animate-fade-in">
+          {AI_MODELS.map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => {
+                onChange(m.id);
+                setIsOpen(false);
+              }}
+              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm text-text-200 hover:bg-bg-200"
+            >
+              {m.label}
+              {m.id === value && <Check className="h-4 w-4 text-accent" />}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );
