@@ -9,17 +9,20 @@ interface MessageInputProps {
   onSend: (message: string) => void;
   isLoading: boolean;
   model: ModelId;
-  onModelChange: (id: ModelId) => void;
+  loadedModelId: ModelId | null;
+  onSelectModel: (id: ModelId) => void;
 }
 
 export default function MessageInput({
   onSend,
   isLoading,
   model,
-  onModelChange,
+  loadedModelId,
+  onSelectModel,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const modelReady = loadedModelId === model;
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -29,7 +32,7 @@ export default function MessageInput({
   }, [message]);
 
   function handleSend() {
-    if (!message.trim() || isLoading) return;
+    if (!message.trim() || isLoading || !modelReady) return;
 
     onSend(message);
 
@@ -44,6 +47,7 @@ export default function MessageInput({
   }
 
   const hasContent = message.trim().length > 0;
+  const canSend = hasContent && !isLoading && modelReady;
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
@@ -51,12 +55,16 @@ export default function MessageInput({
         <textarea
           ref={textareaRef}
           rows={1}
-          placeholder="How can I help you today?"
+          placeholder={
+            modelReady
+              ? "How can I help you today?"
+              : "Pick a model below to get started"
+          }
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
           className="max-h-60 w-full resize-none bg-transparent text-[16px] leading-relaxed text-text-100 outline-none placeholder:text-text-400"
-          disabled={isLoading}
+          disabled={isLoading || !modelReady}
         />
 
         <div className="flex items-center justify-between gap-2">
@@ -70,14 +78,18 @@ export default function MessageInput({
           </button>
 
           <div className="flex items-center gap-2">
-            <ModelSelector value={model} onChange={onModelChange} />
+            <ModelSelector
+              value={model}
+              loadedModelId={loadedModelId}
+              onSelect={onSelectModel}
+            />
 
             <button
               onClick={handleSend}
-              disabled={!hasContent || isLoading}
+              disabled={!canSend}
               aria-label="Send message"
               className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-colors ${
-                hasContent && !isLoading
+                canSend
                   ? "bg-accent text-bg-0 hover:bg-accent-hover"
                   : "bg-accent/30 text-bg-0/60"
               }`}

@@ -1,9 +1,9 @@
-import { UIMessage } from "ai";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import type { ChatMessage } from "@/lib/chat";
 
 interface MessageProps {
-  message: UIMessage;
+  message: ChatMessage;
 }
 
 const markdownComponents: Components = {
@@ -63,25 +63,21 @@ const markdownComponents: Components = {
 
 export default function Message({ message }: MessageProps) {
   const isUser = message.role === "user";
-  const text = message.parts
-    .filter((part) => part.type === "text")
-    .map((part) => part.text)
-    .join("");
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-6`}>
       <div
         className={`max-w-xl rounded-3xl px-5 py-3 ${
           isUser
-            ? "bg-zinc-800 text-white"
-            : "border border-zinc-800 bg-zinc-900 text-white"
+            ? "bg-bg-300 text-text-100"
+            : "border border-bg-300 bg-bg-100 text-text-100"
         }`}
       >
         {isUser ? (
-          text
+          message.content
         ) : (
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-            {text}
+            {message.content}
           </ReactMarkdown>
         )}
       </div>

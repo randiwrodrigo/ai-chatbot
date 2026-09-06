@@ -1,0 +1,72 @@
+import type {
+  ChatCompletionMessageParam,
+  InitProgressReport,
+  MLCEngine,
+} from "@mlc-ai/web-llm";
+
+let engine: MLCEngine | null = null;
+let loadedModelId: string | null = null;
+let loadingPromise: Promise<MLCEngine> | null = null;
+
+export function isWebGPUSupported(): boolean {
+  return typeof navigator !== "undefined" && "gpu" in navigator;
+}
+
+export function getLoadedModelId(): string | null {
+  return loadedModelId;
+}
+
+export async function loadWebLLMModel(
+  modelId: string,
+  onProgress: (report: InitProgressReport) => void,
+): Promise<MLCEngine> {
+  if (engine && loadedModelId === modelId) {
+    return engine;
+  }
+
+  if (loadingPromise) {
+    await loadingPromise.catch(() => {});
+  }
+
+  const load = async () => {
+    const webllm = await import("@mlc-ai/web-llm");
+
+    if (!engine) {
+      engine = await webllm.CreateMLCEngine(modelId, {
+        initProgressCallback: onProgress,
+      });
+    } else {
+      engine.setInitProgressCallback(onProgress);
+      await engine.reload(modelId);
+    }
+
+    loadedModelId = modelId;
+    return engine;
+  };
+
+  loadingPromise = load();
+  try {
+    return await loadingPromise;
+  } finally {
+    loadingPromise = null;
+  }
+}
+
+export async function streamWebLLMChat(
+  messages: ChatCompletionMessageParam[],
+  onDelta: (content: string) => void,
+): Promise<void> {
+  if (!engine) {
+    throw new Error("No WebLLM model is loaded yet");
+  }
+
+  const stream = await engine.chat.completions.create({
+    messages,
+    stream: true,
+  });
+
+  for await (const chunk of stream) {
+    const delta = chunk.choices[0]?.delta?.content;
+    if (delta) onDelta(delta);
+  }
+}

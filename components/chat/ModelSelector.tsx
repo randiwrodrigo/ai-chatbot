@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { AI_MODELS, type ModelId } from "@/lib/models";
 
 interface ModelSelectorProps {
   value: ModelId;
-  onChange: (id: ModelId) => void;
+  loadedModelId: ModelId | null;
+  onSelect: (id: ModelId) => void;
 }
 
-export default function ModelSelector({ value, onChange }: ModelSelectorProps) {
+export default function ModelSelector({
+  value,
+  loadedModelId,
+  onSelect,
+}: ModelSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const selected = AI_MODELS.find((m) => m.id === value) ?? AI_MODELS[0];
@@ -39,25 +44,41 @@ export default function ModelSelector({ value, onChange }: ModelSelectorProps) {
         }`}
       >
         {selected.label}
+        {loadedModelId === selected.id && (
+          <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+        )}
         <ChevronDown
           className={`h-4 w-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
         />
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-0 z-20 mb-2 w-56 overflow-hidden rounded-2xl border border-bg-300 bg-bg-100 p-1.5 shadow-2xl animate-fade-in">
+        <div className="absolute bottom-full left-0 z-20 mb-2 w-72 overflow-hidden rounded-2xl border border-bg-300 bg-bg-100 p-1.5 shadow-2xl animate-fade-in">
           {AI_MODELS.map((m) => (
             <button
               key={m.id}
               type="button"
               onClick={() => {
-                onChange(m.id);
+                onSelect(m.id);
                 setIsOpen(false);
               }}
-              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm text-text-200 hover:bg-bg-200"
+              className="flex w-full items-start gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-bg-200"
             >
-              {m.label}
-              {m.id === value && <Check className="h-4 w-4 text-accent" />}
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-medium text-text-100">
+                    {m.label}
+                  </span>
+                  {loadedModelId === m.id && (
+                    <span className="rounded-full bg-accent/15 px-1.5 py-[1px] text-[10px] font-medium text-accent">
+                      Ready
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs text-text-400">
+                  {m.description} · {m.size}
+                </span>
+              </div>
             </button>
           ))}
         </div>

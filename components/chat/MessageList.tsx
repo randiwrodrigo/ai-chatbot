@@ -1,11 +1,11 @@
 "use client";
 
-import { UIMessage } from "ai";
 import { useEffect, useRef } from "react";
+import type { ChatMessage } from "@/lib/chat";
 import Message from "./Message";
 
 interface MessageListProps {
-  messages: UIMessage[];
+  messages: ChatMessage[];
 }
 
 export default function MessageList({ messages }: MessageListProps) {

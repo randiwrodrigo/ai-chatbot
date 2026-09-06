@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useChat } from "@ai-sdk/react";
 import { Code2, GraduationCap, Home, PenLine } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
-import { DEFAULT_MODEL, type ModelId } from "@/lib/models";
+import type { ChatMessage } from "@/lib/chat";
+import { DEFAULT_MODEL, getModel, type ModelId } from "@/lib/models";
+import { isWebGPUSupported, loadWebLLMModel, streamWebLLMChat } from "@/lib/webllm";
 import MessageInput from "./MessageInput";
 import MessageList from "./MessageList";
+import ModelDownloadModal, { type DownloadStatus } from "./ModelDownloadModal";
 
 const SUGGESTIONS = [
   { label: "Write", icon: PenLine },
@@ -16,13 +18,88 @@ const SUGGESTIONS = [
 ];
 
 export default function Chat() {
-  const { messages, sendMessage, status } = useChat();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [model, setModel] = useState<ModelId>(DEFAULT_MODEL);
-  const isLoading = status === "submitted" || status === "streaming";
+  const [loadedModelId, setLoadedModelId] = useState<ModelId | null>(null);
+  const [isReplying, setIsReplying] = useState(false);
 
-  function handleSend(content: string) {
-    sendMessage({ text: content }, { body: { model } });
+  const [downloadModel, setDownloadModel] = useState<ModelId | null>(null);
+  const [downloadStatus, setDownloadStatus] = useState<DownloadStatus>("idle");
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadProgressText, setDownloadProgressText] = useState("");
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  function handleSelectModel(id: ModelId) {
+    setModel(id);
+    if (id === loadedModelId) return;
+
+    setDownloadModel(id);
+    setDownloadStatus("idle");
+    setDownloadProgress(0);
+    setDownloadProgressText("");
+    setDownloadError(null);
+  }
+
+  async function handleDownload() {
+    if (!downloadModel) return;
+
+    setDownloadStatus("downloading");
+    setDownloadError(null);
+
+    try {
+      await loadWebLLMModel(downloadModel, (report) => {
+        setDownloadProgress(Math.min(100, Math.round(report.progress * 100)));
+        setDownloadProgressText(report.text);
+      });
+      setLoadedModelId(downloadModel);
+      setDownloadStatus("done");
+    } catch (err) {
+      console.error("Failed to load WebLLM model:", err);
+      setDownloadError(
+        err instanceof Error ? err.message : "Failed to download the model",
+      );
+      setDownloadStatus("error");
+    }
+  }
+
+  async function handleSend(content: string) {
+    if (loadedModelId !== model) return;
+
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content,
+    };
+    const assistantId = crypto.randomUUID();
+    const history = [...messages, userMessage];
+
+    setMessages([...history, { id: assistantId, role: "assistant", content: "" }]);
+    setIsReplying(true);
+
+    try {
+      let full = "";
+      await streamWebLLMChat(
+        history.map(({ role, content }) => ({ role, content })),
+        (delta) => {
+          full += delta;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, content: full } : m)),
+          );
+        },
+      );
+    } catch (err) {
+      console.error("WebLLM generation failed:", err);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId
+            ? { ...m, content: "Sorry, something went wrong generating a reply." }
+            : m,
+        ),
+      );
+    } finally {
+      setIsReplying(false);
+    }
   }
 
   return (
@@ -58,9 +135,10 @@ export default function Chat() {
           <div className="w-full max-w-3xl">
             <MessageInput
               onSend={handleSend}
-              isLoading={isLoading}
+              isLoading={isReplying}
               model={model}
-              onModelChange={setModel}
+              loadedModelId={loadedModelId}
+              onSelectModel={handleSelectModel}
             />
           </div>
 
@@ -86,12 +164,26 @@ export default function Chat() {
           <footer className="border-t border-bg-300 p-4">
             <MessageInput
               onSend={handleSend}
-              isLoading={isLoading}
+              isLoading={isReplying}
               model={model}
-              onModelChange={setModel}
+              loadedModelId={loadedModelId}
+              onSelectModel={handleSelectModel}
             />
           </footer>
         </>
+      )}
+
+      {downloadModel && (
+        <ModelDownloadModal
+          model={getModel(downloadModel)}
+          status={downloadStatus}
+          progress={downloadProgress}
+          progressText={downloadProgressText}
+          error={downloadError}
+          webGpuSupported={isWebGPUSupported()}
+          onDownload={handleDownload}
+          onClose={() => setDownloadModel(null)}
+        />
       )}
     </main>
   );
