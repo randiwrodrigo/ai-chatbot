@@ -7,12 +7,14 @@ import { AI_MODELS, type ModelId } from "@/lib/models";
 interface ModelSelectorProps {
   value: ModelId;
   loadedModelId: ModelId | null;
+  cachedModelIds: Set<ModelId>;
   onSelect: (id: ModelId) => void;
 }
 
 export default function ModelSelector({
   value,
   loadedModelId,
+  cachedModelIds,
   onSelect,
 }: ModelSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -69,10 +71,16 @@ export default function ModelSelector({
                   <span className="text-sm font-medium text-text-100">
                     {m.label}
                   </span>
-                  {loadedModelId === m.id && (
+                  {loadedModelId === m.id ? (
                     <span className="rounded-full bg-accent/15 px-1.5 py-[1px] text-[10px] font-medium text-accent">
                       Ready
                     </span>
+                  ) : (
+                    cachedModelIds.has(m.id) && (
+                      <span className="rounded-full bg-bg-300 px-1.5 py-[1px] text-[10px] font-medium text-text-300">
+                        Cached
+                      </span>
+                    )
                   )}
                 </div>
                 <span className="text-xs text-text-400">

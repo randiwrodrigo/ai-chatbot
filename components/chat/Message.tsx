@@ -1,9 +1,12 @@
+import { Loader2 } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import CodeBlock from "./CodeBlock";
 import type { ChatMessage } from "@/lib/chat";
 
 interface MessageProps {
   message: ChatMessage;
+  isStreaming?: boolean;
 }
 
 const markdownComponents: Components = {
@@ -17,7 +20,7 @@ const markdownComponents: Components = {
     <h3 className="mb-2 mt-4 text-xl font-semibold">{children}</h3>
   ),
   p: ({ children }) => (
-    <p className="mb-4 leading-7 text-zinc-200">{children}</p>
+    <p className="mb-4 leading-7 text-text-200">{children}</p>
   ),
   ul: ({ children }) => (
     <ul className="mb-4 list-disc space-y-2 pl-6">{children}</ul>
@@ -25,9 +28,9 @@ const markdownComponents: Components = {
   ol: ({ children }) => (
     <ol className="mb-4 list-decimal space-y-2 pl-6">{children}</ol>
   ),
-  li: ({ children }) => <li className="text-zinc-200">{children}</li>,
+  li: ({ children }) => <li className="text-text-200">{children}</li>,
   blockquote: ({ children }) => (
-    <blockquote className="my-4 border-l-4 border-zinc-600 pl-4 italic text-zinc-400">
+    <blockquote className="my-4 border-l-4 border-bg-300 pl-4 italic text-text-400">
       {children}
     </blockquote>
   ),
@@ -45,36 +48,37 @@ const markdownComponents: Components = {
     const isCodeBlock = className?.includes("language-");
 
     if (isCodeBlock) {
-      return <code className={className}>{children}</code>;
+      const language = className?.replace("language-", "") ?? "";
+      const code = String(children).replace(/\n$/, "");
+      return <CodeBlock language={language} code={code} />;
     }
 
     return (
-      <code className="rounded bg-zinc-800 px-1.5 py-0.5 font-mono text-sm text-green-400">
+      <code className="rounded bg-bg-300 px-1.5 py-0.5 font-mono text-sm text-green-400">
         {children}
       </code>
     );
   },
-  pre: ({ children }) => (
-    <pre className="mb-4 overflow-x-auto rounded-xl bg-zinc-950 p-4">
-      {children}
-    </pre>
-  ),
+  pre: ({ children }) => <>{children}</>,
 };
 
-export default function Message({ message }: MessageProps) {
+export default function Message({ message, isStreaming }: MessageProps) {
   const isUser = message.role === "user";
+  const isWaitingForFirstToken = isStreaming && message.content.length === 0;
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-6`}>
       <div
-        className={`max-w-xl rounded-3xl px-5 py-3 ${
+        className={`rounded-3xl px-5 py-3 ${isUser ? "max-w-xl" : "max-w-2xl"} ${
           isUser
             ? "bg-bg-300 text-text-100"
             : "border border-bg-300 bg-bg-100 text-text-100"
         }`}
       >
         {isUser ? (
-          message.content
+          <span className="whitespace-pre-wrap">{message.content}</span>
+        ) : isWaitingForFirstToken ? (
+          <Loader2 className="h-4 w-4 animate-spin text-accent" />
         ) : (
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
             {message.content}

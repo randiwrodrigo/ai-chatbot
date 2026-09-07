@@ -11,6 +11,7 @@ interface ModelDownloadModalProps {
   progress: number;
   progressText: string;
   error: string | null;
+  isCached: boolean;
   webGpuSupported: boolean;
   onDownload: () => void;
   onClose: () => void;
@@ -22,6 +23,7 @@ export default function ModelDownloadModal({
   progress,
   progressText,
   error,
+  isCached,
   webGpuSupported,
   onDownload,
   onClose,
@@ -54,7 +56,7 @@ export default function ModelDownloadModal({
 
         <div className="mt-6 rounded-xl border border-bg-300 bg-bg-0 px-4 py-3 text-sm text-text-300">
           <div className="flex items-center justify-between">
-            <span>Download size</span>
+            <span>{isCached ? "Size on disk" : "Download size"}</span>
             <span className="font-medium text-text-100">{model.size}</span>
           </div>
         </div>
@@ -80,6 +82,12 @@ export default function ModelDownloadModal({
           </>
         ) : status === "downloading" ? (
           <div className="mt-6">
+            {isCached && (
+              <p className="mb-3 text-center text-xs text-text-500">
+                Already on this device — loading it into memory, no download
+                needed.
+              </p>
+            )}
             <div className="h-2 w-full overflow-hidden rounded-full bg-bg-300">
               <div
                 className="h-full rounded-full bg-accent transition-all duration-200"
@@ -88,14 +96,16 @@ export default function ModelDownloadModal({
             </div>
             <p className="mt-3 flex items-center justify-center gap-2 text-center text-xs text-text-500">
               <Loader2 className="h-3 w-3 animate-spin" />
-              {progressText || "Preparing download..."}
+              {progressText || "Preparing..."}
             </p>
           </div>
         ) : status === "done" ? (
           <>
             <div className="mt-6 flex items-center justify-center gap-2 text-accent">
               <Check className="h-5 w-5" />
-              <span className="font-medium">Download complete</span>
+              <span className="font-medium">
+                {isCached ? "Ready to go" : "Download complete"}
+              </span>
             </div>
             <button
               onClick={onClose}
@@ -107,7 +117,7 @@ export default function ModelDownloadModal({
         ) : (
           <>
             <p className="mt-4 text-center text-sm text-red-400">
-              {error ?? "Something went wrong while downloading this model."}
+              {error ?? "Something went wrong while loading this model."}
             </p>
             <button
               onClick={onDownload}

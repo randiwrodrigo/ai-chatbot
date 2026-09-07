@@ -12,8 +12,9 @@ export function isWebGPUSupported(): boolean {
   return typeof navigator !== "undefined" && "gpu" in navigator;
 }
 
-export function getLoadedModelId(): string | null {
-  return loadedModelId;
+export async function isModelCached(modelId: string): Promise<boolean> {
+  const webllm = await import("@mlc-ai/web-llm");
+  return webllm.hasModelInCache(modelId);
 }
 
 export async function loadWebLLMModel(
@@ -52,10 +53,9 @@ export async function loadWebLLMModel(
   }
 }
 
-export async function streamWebLLMChat(
+export async function* streamWebLLMChat(
   messages: ChatCompletionMessageParam[],
-  onDelta: (content: string) => void,
-): Promise<void> {
+): AsyncGenerator<string> {
   if (!engine) {
     throw new Error("No WebLLM model is loaded yet");
   }
@@ -67,6 +67,6 @@ export async function streamWebLLMChat(
 
   for await (const chunk of stream) {
     const delta = chunk.choices[0]?.delta?.content;
-    if (delta) onDelta(delta);
+    if (delta) yield delta;
   }
 }

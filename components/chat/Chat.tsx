@@ -1,11 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Code2, GraduationCap, Home, PenLine } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import type { ChatMessage } from "@/lib/chat";
-import { DEFAULT_MODEL, getModel, type ModelId } from "@/lib/models";
-import { isWebGPUSupported, loadWebLLMModel, streamWebLLMChat } from "@/lib/webllm";
+import { AI_MODELS, DEFAULT_MODEL, getModel, isModelId, type ModelId } from "@/lib/models";
+import {
+  isModelCached,
+  isWebGPUSupported,
+  loadWebLLMModel,
+  streamWebLLMChat,
+} from "@/lib/webllm";
 import MessageInput from "./MessageInput";
 import MessageList from "./MessageList";
 import ModelDownloadModal, { type DownloadStatus } from "./ModelDownloadModal";
@@ -17,12 +22,13 @@ const SUGGESTIONS = [
   { label: "Life stuff", icon: Home },
 ];
 
+const LAST_MODEL_KEY = "webllm-last-model";
+
 export default function Chat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [model, setModel] = useState<ModelId>(DEFAULT_MODEL);
   const [loadedModelId, setLoadedModelId] = useState<ModelId | null>(null);
-  const [isReplying, setIsReplying] = useState(false);
 
   const [downloadModel, setDownloadModel] = useState<ModelId | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<DownloadStatus>("idle");
@@ -30,29 +36,75 @@ export default function Chat() {
   const [downloadProgressText, setDownloadProgressText] = useState("");
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
+    null,
+  );
+
+  const [cachedModelIds, setCachedModelIds] = useState<Set<ModelId>>(new Set());
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkCache() {
+      const results = await Promise.all(
+        AI_MODELS.map(async (m) => [m.id, await isModelCached(m.id)] as const),
+      );
+      if (cancelled) return;
+
+      const cached = new Set(results.filter(([, ok]) => ok).map(([id]) => id));
+      setCachedModelIds(cached);
+
+      const lastModel = localStorage.getItem(LAST_MODEL_KEY);
+      if (isModelId(lastModel) && cached.has(lastModel)) {
+        setModel(lastModel);
+        setIsRestoring(true);
+        try {
+          await loadWebLLMModel(lastModel, () => {});
+          if (!cancelled) setLoadedModelId(lastModel);
+        } catch (err) {
+          console.error("Failed to restore last WebLLM model:", err);
+        } finally {
+          if (!cancelled) setIsRestoring(false);
+        }
+      }
+    }
+
+    checkCache();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function handleSelectModel(id: ModelId) {
     setModel(id);
     if (id === loadedModelId) return;
 
     setDownloadModel(id);
-    setDownloadStatus("idle");
     setDownloadProgress(0);
     setDownloadProgressText("");
     setDownloadError(null);
+
+    if (cachedModelIds.has(id)) {
+      // Already on this device — load it straight away, no "Download" click needed.
+      startLoad(id);
+    } else {
+      setDownloadStatus("idle");
+    }
   }
 
-  async function handleDownload() {
-    if (!downloadModel) return;
-
+  async function startLoad(id: ModelId) {
     setDownloadStatus("downloading");
     setDownloadError(null);
 
     try {
-      await loadWebLLMModel(downloadModel, (report) => {
+      await loadWebLLMModel(id, (report) => {
         setDownloadProgress(Math.min(100, Math.round(report.progress * 100)));
         setDownloadProgressText(report.text);
       });
-      setLoadedModelId(downloadModel);
+      setLoadedModelId(id);
+      setCachedModelIds((prev) => new Set(prev).add(id));
+      localStorage.setItem(LAST_MODEL_KEY, id);
       setDownloadStatus("done");
     } catch (err) {
       console.error("Failed to load WebLLM model:", err);
@@ -63,7 +115,37 @@ export default function Chat() {
     }
   }
 
-  async function handleSend(content: string) {
+  function handleDownload() {
+    if (!downloadModel) return;
+    startLoad(downloadModel);
+  }
+
+  async function generateReply(assistantId: string, history: ChatMessage[]) {
+    try {
+      let full = "";
+      for await (const delta of streamWebLLMChat(
+        history.map(({ role, content }) => ({ role, content })),
+      )) {
+        full += delta;
+        setMessages((prev) =>
+          prev.map((m) => (m.id === assistantId ? { ...m, content: full } : m)),
+        );
+      }
+    } catch (err) {
+      console.error("WebLLM generation failed:", err);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId && !m.content
+            ? { ...m, content: "Sorry, something went wrong generating a reply." }
+            : m,
+        ),
+      );
+    } finally {
+      setStreamingMessageId(null);
+    }
+  }
+
+  function handleSend(content: string) {
     if (loadedModelId !== model) return;
 
     const userMessage: ChatMessage = {
@@ -75,31 +157,9 @@ export default function Chat() {
     const history = [...messages, userMessage];
 
     setMessages([...history, { id: assistantId, role: "assistant", content: "" }]);
-    setIsReplying(true);
+    setStreamingMessageId(assistantId);
 
-    try {
-      let full = "";
-      await streamWebLLMChat(
-        history.map(({ role, content }) => ({ role, content })),
-        (delta) => {
-          full += delta;
-          setMessages((prev) =>
-            prev.map((m) => (m.id === assistantId ? { ...m, content: full } : m)),
-          );
-        },
-      );
-    } catch (err) {
-      console.error("WebLLM generation failed:", err);
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantId
-            ? { ...m, content: "Sorry, something went wrong generating a reply." }
-            : m,
-        ),
-      );
-    } finally {
-      setIsReplying(false);
-    }
+    generateReply(assistantId, history);
   }
 
   return (
@@ -135,9 +195,11 @@ export default function Chat() {
           <div className="w-full max-w-3xl">
             <MessageInput
               onSend={handleSend}
-              isLoading={isReplying}
+              isLoading={streamingMessageId !== null}
               model={model}
               loadedModelId={loadedModelId}
+              cachedModelIds={cachedModelIds}
+              isRestoring={isRestoring}
               onSelectModel={handleSelectModel}
             />
           </div>
@@ -158,15 +220,17 @@ export default function Chat() {
       ) : (
         <>
           <section className="flex-1 overflow-y-auto">
-            <MessageList messages={messages} />
+            <MessageList messages={messages} streamingMessageId={streamingMessageId} />
           </section>
 
           <footer className="border-t border-bg-300 p-4">
             <MessageInput
               onSend={handleSend}
-              isLoading={isReplying}
+              isLoading={streamingMessageId !== null}
               model={model}
               loadedModelId={loadedModelId}
+              cachedModelIds={cachedModelIds}
+              isRestoring={isRestoring}
               onSelectModel={handleSelectModel}
             />
           </footer>
@@ -180,6 +244,7 @@ export default function Chat() {
           progress={downloadProgress}
           progressText={downloadProgressText}
           error={downloadError}
+          isCached={cachedModelIds.has(downloadModel)}
           webGpuSupported={isWebGPUSupported()}
           onDownload={handleDownload}
           onClose={() => setDownloadModel(null)}

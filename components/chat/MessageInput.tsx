@@ -10,6 +10,8 @@ interface MessageInputProps {
   isLoading: boolean;
   model: ModelId;
   loadedModelId: ModelId | null;
+  cachedModelIds: Set<ModelId>;
+  isRestoring: boolean;
   onSelectModel: (id: ModelId) => void;
 }
 
@@ -18,6 +20,8 @@ export default function MessageInput({
   isLoading,
   model,
   loadedModelId,
+  cachedModelIds,
+  isRestoring,
   onSelectModel,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
@@ -58,7 +62,9 @@ export default function MessageInput({
           placeholder={
             modelReady
               ? "How can I help you today?"
-              : "Pick a model below to get started"
+              : isRestoring
+                ? "Loading your last model from cache..."
+                : "Pick a model below to get started"
           }
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -81,6 +87,7 @@ export default function MessageInput({
             <ModelSelector
               value={model}
               loadedModelId={loadedModelId}
+              cachedModelIds={cachedModelIds}
               onSelect={onSelectModel}
             />
 
