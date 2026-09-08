@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import { Code2, GraduationCap, Home, PenLine } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import type { ChatMessage } from "@/lib/chat";
+import {
+  loadConversations,
+  saveConversations,
+  titleFromMessage,
+  type Conversation,
+} from "@/lib/conversations";
 import { AI_MODELS, DEFAULT_MODEL, getModel, isModelId, type ModelId } from "@/lib/models";
 import {
   isModelCached,
@@ -43,10 +49,17 @@ export default function Chat() {
   const [cachedModelIds, setCachedModelIds] = useState<Set<ModelId>>(new Set());
   const [isRestoring, setIsRestoring] = useState(false);
 
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<
+    string | null
+  >(null);
+
   useEffect(() => {
     let cancelled = false;
 
     async function checkCache() {
+      setConversations(loadConversations());
+
       const results = await Promise.all(
         AI_MODELS.map(async (m) => [m.id, await isModelCached(m.id)] as const),
       );
@@ -120,9 +133,21 @@ export default function Chat() {
     startLoad(downloadModel);
   }
 
-  async function generateReply(assistantId: string, history: ChatMessage[]) {
+  function upsertConversation(update: (conversations: Conversation[]) => Conversation[]) {
+    setConversations((prev) => {
+      const next = update(prev);
+      saveConversations(next);
+      return next;
+    });
+  }
+
+  async function generateReply(
+    assistantId: string,
+    history: ChatMessage[],
+    conversationId: string,
+  ) {
+    let full = "";
     try {
-      let full = "";
       for await (const delta of streamWebLLMChat(
         history.map(({ role, content }) => ({ role, content })),
       )) {
@@ -133,15 +158,24 @@ export default function Chat() {
       }
     } catch (err) {
       console.error("WebLLM generation failed:", err);
+      if (!full) full = "Sorry, something went wrong generating a reply.";
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantId && !m.content
-            ? { ...m, content: "Sorry, something went wrong generating a reply." }
-            : m,
-        ),
+        prev.map((m) => (m.id === assistantId ? { ...m, content: full } : m)),
       );
     } finally {
       setStreamingMessageId(null);
+      const finalMessages = [
+        ...history,
+        { id: assistantId, role: "assistant" as const, content: full },
+      ];
+      const now = Date.now();
+      upsertConversation((prev) =>
+        prev.map((c) =>
+          c.id === conversationId
+            ? { ...c, messages: finalMessages, updatedAt: now }
+            : c,
+        ),
+      );
     }
   }
 
@@ -155,16 +189,93 @@ export default function Chat() {
     };
     const assistantId = crypto.randomUUID();
     const history = [...messages, userMessage];
+    const fullMessages = [
+      ...history,
+      { id: assistantId, role: "assistant" as const, content: "" },
+    ];
 
-    setMessages([...history, { id: assistantId, role: "assistant", content: "" }]);
+    setMessages(fullMessages);
     setStreamingMessageId(assistantId);
 
-    generateReply(assistantId, history);
+    const conversationId = currentConversationId ?? crypto.randomUUID();
+    if (!currentConversationId) setCurrentConversationId(conversationId);
+
+    const now = Date.now();
+    upsertConversation((prev) => {
+      const existing = prev.find((c) => c.id === conversationId);
+      const updated: Conversation = existing
+        ? { ...existing, messages: fullMessages, updatedAt: now }
+        : {
+            id: conversationId,
+            title: titleFromMessage(content),
+            messages: fullMessages,
+            pinned: false,
+            archived: false,
+            createdAt: now,
+            updatedAt: now,
+          };
+      return existing
+        ? prev.map((c) => (c.id === conversationId ? updated : c))
+        : [updated, ...prev];
+    });
+
+    generateReply(assistantId, history, conversationId);
+  }
+
+  function handleNewChat() {
+    setMessages([]);
+    setCurrentConversationId(null);
+    setIsSidebarOpen(false);
+  }
+
+  function handleSelectConversation(id: string) {
+    const conversation = conversations.find((c) => c.id === id);
+    if (!conversation) return;
+    setMessages(conversation.messages);
+    setCurrentConversationId(id);
+    setIsSidebarOpen(false);
+  }
+
+  function handleRenameConversation(id: string, title: string) {
+    upsertConversation((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, title } : c)),
+    );
+  }
+
+  function handleTogglePin(id: string) {
+    upsertConversation((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, pinned: !c.pinned } : c)),
+    );
+  }
+
+  function handleToggleArchive(id: string) {
+    upsertConversation((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, archived: !c.archived } : c)),
+    );
+  }
+
+  function handleDeleteConversation(id: string) {
+    upsertConversation((prev) => prev.filter((c) => c.id !== id));
+    if (id === currentConversationId) {
+      setMessages([]);
+      setCurrentConversationId(null);
+    }
   }
 
   return (
     <main className="flex h-screen flex-col bg-bg-0 text-text-100">
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        conversations={conversations}
+        currentConversationId={currentConversationId}
+        onNewChat={handleNewChat}
+        onSelectConversation={handleSelectConversation}
+        onRenameConversation={handleRenameConversation}
+        onTogglePin={handleTogglePin}
+        onToggleArchive={handleToggleArchive}
+        onDeleteConversation={handleDeleteConversation}
+      />
 
       <header className="h-16 border-b border-bg-300 px-4 flex items-center gap-2">
         <button

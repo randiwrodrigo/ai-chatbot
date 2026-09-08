@@ -2,12 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
+import { SquarePen } from "lucide-react";
 import { auth } from "@/lib/firebase";
+import type { Conversation } from "@/lib/conversations";
+import ConversationItem from "./ConversationItem";
 import LoginModal from "./LoginModal";
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  conversations: Conversation[];
+  currentConversationId: string | null;
+  onNewChat: () => void;
+  onSelectConversation: (id: string) => void;
+  onRenameConversation: (id: string, title: string) => void;
+  onTogglePin: (id: string) => void;
+  onToggleArchive: (id: string) => void;
+  onDeleteConversation: (id: string) => void;
 }
 
 function getInitials(name: string) {
@@ -16,13 +27,51 @@ function getInitials(name: string) {
   return initials.toUpperCase();
 }
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+export default function Sidebar({
+  isOpen,
+  onClose,
+  conversations,
+  currentConversationId,
+  onNewChat,
+  onSelectConversation,
+  onRenameConversation,
+  onTogglePin,
+  onToggleArchive,
+  onDeleteConversation,
+}: SidebarProps) {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     return onAuthStateChanged(auth, setUser);
   }, []);
+
+  const visible = conversations.filter((c) => !c.archived);
+  const pinned = [...visible.filter((c) => c.pinned)].sort(
+    (a, b) => b.updatedAt - a.updatedAt,
+  );
+  const others = [...visible.filter((c) => !c.pinned)].sort(
+    (a, b) => b.updatedAt - a.updatedAt,
+  );
+  const archived = [...conversations.filter((c) => c.archived)].sort(
+    (a, b) => b.updatedAt - a.updatedAt,
+  );
+
+  function renderItem(conversation: Conversation) {
+    return (
+      <ConversationItem
+        key={conversation.id}
+        conversation={conversation}
+        isActive={conversation.id === currentConversationId}
+        onSelect={() => onSelectConversation(conversation.id)}
+        onRename={(title) => onRenameConversation(conversation.id, title)}
+        onTogglePin={() => onTogglePin(conversation.id)}
+        onToggleArchive={() => onToggleArchive(conversation.id)}
+        onRequestDelete={() => setDeletingId(conversation.id)}
+      />
+    );
+  }
 
   return (
     <>
@@ -60,8 +109,41 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-2 text-sm text-text-500">
-          No conversations yet
+        <div className="flex-1 overflow-y-auto px-2 py-2">
+          <button
+            onClick={onNewChat}
+            className="mb-2 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-text-200 hover:bg-bg-200"
+          >
+            <SquarePen className="h-4 w-4" />
+            New chat
+          </button>
+
+          {pinned.length === 0 && others.length === 0 && archived.length === 0 && (
+            <p className="px-3 py-2 text-sm text-text-500">No conversations yet</p>
+          )}
+
+          {pinned.length > 0 && (
+            <div className="mb-2">
+              <p className="px-3 pb-1 text-xs font-medium text-text-500">Pinned</p>
+              {pinned.map(renderItem)}
+            </div>
+          )}
+
+          {others.length > 0 && (
+            <div className="mb-2">
+              {pinned.length > 0 && (
+                <p className="px-3 pb-1 text-xs font-medium text-text-500">Chats</p>
+              )}
+              {others.map(renderItem)}
+            </div>
+          )}
+
+          {archived.length > 0 && (
+            <div>
+              <p className="px-3 pb-1 text-xs font-medium text-text-500">Archived</p>
+              {archived.map(renderItem)}
+            </div>
+          )}
         </div>
 
         <div className="border-t border-bg-300 p-4">
@@ -131,6 +213,41 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       </aside>
 
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+
+      {deletingId && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
+          <div
+            onClick={() => setDeletingId(null)}
+            className="fixed inset-0 bg-black/70"
+          />
+
+          <div className="relative w-full max-w-sm rounded-2xl bg-bg-100 p-6">
+            <h2 className="text-lg font-semibold text-text-100">Delete chat?</h2>
+            <p className="mt-2 text-sm text-text-400">
+              Are you sure you want to delete this chat?
+            </p>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeletingId(null)}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-text-200 hover:bg-bg-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onDeleteConversation(deletingId);
+                  setDeletingId(null);
+                }}
+                className="rounded-lg bg-red-500/90 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
