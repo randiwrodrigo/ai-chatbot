@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { onAuthStateChanged, type User } from "firebase/auth";
 import { Code2, GraduationCap, Home, PenLine } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
 import type { ChatMessage } from "@/lib/chat";
+import { auth } from "@/lib/firebase";
 import {
   loadConversations,
   saveConversations,
@@ -35,6 +37,11 @@ export default function Chat() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [model, setModel] = useState<ModelId>(DEFAULT_MODEL);
   const [loadedModelId, setLoadedModelId] = useState<ModelId | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, setUser);
+  }, []);
 
   const [downloadModel, setDownloadModel] = useState<ModelId | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<DownloadStatus>("idle");
@@ -302,7 +309,9 @@ export default function Chat() {
 
       {messages.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4">
-          <p className="text-2xl font-medium text-text-200">Ask me anything</p>
+          <p className="font-serif text-3xl font-light text-text-200 sm:text-4xl">
+            {user ? `Hey there, ${user.displayName ?? user.email}` : "Ask me anything"}
+          </p>
           <div className="w-full max-w-3xl">
             <MessageInput
               onSend={handleSend}
