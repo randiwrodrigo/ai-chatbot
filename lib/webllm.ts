@@ -17,6 +17,11 @@ export async function isModelCached(modelId: string): Promise<boolean> {
   return webllm.hasModelInCache(modelId);
 }
 
+export async function deleteModelFromCache(modelId: string): Promise<void> {
+  const webllm = await import("@mlc-ai/web-llm");
+  await webllm.deleteModelAllInfoInCache(modelId);
+}
+
 export async function loadWebLLMModel(
   modelId: string,
   onProgress: (report: InitProgressReport) => void,

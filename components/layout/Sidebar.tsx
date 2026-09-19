@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { onAuthStateChanged, signOut, type User } from "firebase/auth";
+import { useEffect, useRef, useState } from "react";
+import { signOut, type User } from "firebase/auth";
 import { SquarePen } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import type { Conversation } from "@/lib/conversations";
+import type { ModelId } from "@/lib/models";
+import AccountMenu from "./AccountMenu";
 import ConversationItem from "./ConversationItem";
 import LoginModal from "./LoginModal";
+import SettingsModal, { type SettingsTab } from "./SettingsModal";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -19,6 +22,14 @@ interface SidebarProps {
   onTogglePin: (id: string) => void;
   onToggleArchive: (id: string) => void;
   onDeleteConversation: (id: string) => void;
+  onClearConversations: () => void;
+  loadedModelId: ModelId | null;
+  cachedModelIds: Set<ModelId>;
+  isStreaming: boolean;
+  onSelectModel: (id: ModelId) => void;
+  onDeleteModel: (id: ModelId) => Promise<void> | void;
+  user: User | null;
+  onProfileUpdated: () => void;
 }
 
 function getInitials(name: string) {
@@ -38,14 +49,34 @@ export default function Sidebar({
   onTogglePin,
   onToggleArchive,
   onDeleteConversation,
+  onClearConversations,
+  loadedModelId,
+  cachedModelIds,
+  isStreaming,
+  onSelectModel,
+  onDeleteModel,
+  user,
+  onProfileUpdated,
 }: SidebarProps) {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab | null>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, setUser);
-  }, []);
+    if (!accountMenuOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        accountMenuRef.current &&
+        !accountMenuRef.current.contains(event.target as Node)
+      ) {
+        setAccountMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [accountMenuOpen]);
 
   const visible = conversations.filter((c) => !c.archived);
   const pinned = [...visible.filter((c) => c.pinned)].sort(
@@ -148,48 +179,47 @@ export default function Sidebar({
 
         <div className="border-t border-bg-300 p-4">
           {user ? (
-            <div className="flex items-center gap-3 rounded-xl p-2 hover:bg-bg-200">
-              {user.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt={user.displayName ?? "Account"}
-                  referrerPolicy="no-referrer"
-                  className="h-9 w-9 shrink-0 rounded-full"
+            <div className="relative" ref={accountMenuRef}>
+              {accountMenuOpen && (
+                <AccountMenu
+                  user={user}
+                  onOpenSettings={(tab) => {
+                    setAccountMenuOpen(false);
+                    setSettingsTab(tab);
+                  }}
+                  onLogout={() => {
+                    setAccountMenuOpen(false);
+                    signOut(auth);
+                  }}
                 />
-              ) : (
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg-300 text-sm font-semibold text-text-100">
-                  {getInitials(user.displayName ?? user.email ?? "?")}
-                </div>
               )}
 
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-text-100">
-                  {user.displayName ?? user.email}
-                </p>
-                <p className="truncate text-xs text-text-400">
-                  {user.email}
-                </p>
-              </div>
-
               <button
-                onClick={() => signOut(auth)}
-                aria-label="Log out"
-                className="shrink-0 rounded-lg p-2 text-text-400 hover:bg-bg-300 hover:text-text-100"
+                type="button"
+                onClick={() => setAccountMenuOpen((open) => !open)}
+                className="flex w-full items-center gap-3 rounded-xl p-2 hover:bg-bg-200"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4"
-                >
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
-                </svg>
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt={user.displayName ?? "Account"}
+                    referrerPolicy="no-referrer"
+                    className="h-9 w-9 shrink-0 rounded-full"
+                  />
+                ) : (
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bg-300 text-sm font-semibold text-text-100">
+                    {getInitials(user.displayName ?? user.email ?? "?")}
+                  </div>
+                )}
+
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="truncate text-sm font-medium text-text-100">
+                    {user.displayName ?? user.email}
+                  </p>
+                  <p className="truncate text-xs text-text-400">
+                    {user.email}
+                  </p>
+                </div>
               </button>
             </div>
           ) : (
@@ -213,6 +243,28 @@ export default function Sidebar({
       </aside>
 
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+
+      {settingsTab && user && (
+        <SettingsModal
+          initialTab={settingsTab}
+          user={user}
+          loadedModelId={loadedModelId}
+          cachedModelIds={cachedModelIds}
+          isStreaming={isStreaming}
+          onSelectModel={(id) => {
+            onSelectModel(id);
+            setSettingsTab(null);
+          }}
+          onDeleteModel={onDeleteModel}
+          onClearConversations={onClearConversations}
+          onProfileUpdated={onProfileUpdated}
+          onLogout={() => {
+            setSettingsTab(null);
+            signOut(auth);
+          }}
+          onClose={() => setSettingsTab(null)}
+        />
+      )}
 
       {deletingId && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">

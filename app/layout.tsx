@@ -31,8 +31,27 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${sourceSerif.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <script
+          // Runs before paint to avoid a flash of the wrong theme/font.
+          // Keys must match STORAGE_KEY in lib/theme.ts and lib/font.ts.
+          dangerouslySetInnerHTML={{
+            __html: `try {
+              var t = localStorage.getItem("theme-preference");
+              if (t === "light" || t === "dark") {
+                document.documentElement.setAttribute("data-theme", t);
+              }
+              var f = localStorage.getItem("font-preference");
+              if (f === "serif" || f === "system") {
+                document.documentElement.setAttribute("data-font", f);
+              }
+            } catch (e) {}`,
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

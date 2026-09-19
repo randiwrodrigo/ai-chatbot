@@ -14,6 +14,7 @@ import {
 } from "@/lib/conversations";
 import { AI_MODELS, DEFAULT_MODEL, getModel, isModelId, type ModelId } from "@/lib/models";
 import {
+  deleteModelFromCache,
   isModelCached,
   isWebGPUSupported,
   loadWebLLMModel,
@@ -42,6 +43,12 @@ export default function Chat() {
   useEffect(() => {
     return onAuthStateChanged(auth, setUser);
   }, []);
+
+  function refreshUser() {
+    // updateProfile() mutates auth.currentUser in place, so a plain re-set
+    // wouldn't trigger a re-render — copy it into a fresh object instead.
+    if (auth.currentUser) setUser({ ...auth.currentUser } as User);
+  }
 
   const [downloadModel, setDownloadModel] = useState<ModelId | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<DownloadStatus>("idle");
@@ -269,6 +276,30 @@ export default function Chat() {
     }
   }
 
+  function handleClearConversations() {
+    setConversations([]);
+    saveConversations([]);
+    setMessages([]);
+    setCurrentConversationId(null);
+  }
+
+  async function handleDeleteModel(id: ModelId) {
+    try {
+      await deleteModelFromCache(id);
+    } catch (err) {
+      console.error("Failed to delete cached model:", err);
+    }
+    setCachedModelIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    if (loadedModelId === id) setLoadedModelId(null);
+    if (localStorage.getItem(LAST_MODEL_KEY) === id) {
+      localStorage.removeItem(LAST_MODEL_KEY);
+    }
+  }
+
   return (
     <main className="flex h-screen flex-col bg-bg-0 text-text-100">
       <Sidebar
@@ -282,6 +313,14 @@ export default function Chat() {
         onTogglePin={handleTogglePin}
         onToggleArchive={handleToggleArchive}
         onDeleteConversation={handleDeleteConversation}
+        onClearConversations={handleClearConversations}
+        loadedModelId={loadedModelId}
+        cachedModelIds={cachedModelIds}
+        isStreaming={streamingMessageId !== null}
+        onSelectModel={handleSelectModel}
+        onDeleteModel={handleDeleteModel}
+        user={user}
+        onProfileUpdated={refreshUser}
       />
 
       <header className="h-16 border-b border-bg-300 px-4 flex items-center gap-2">
