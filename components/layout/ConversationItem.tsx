@@ -76,7 +76,7 @@ export default function ConversationItem({
   return (
     <div
       className={`group relative flex items-center gap-1 rounded-xl px-3 py-2 ${
-        isActive ? "bg-bg-200" : "hover:bg-bg-200"
+        isActive ? "bg-bg-sidebar-hover" : "hover:bg-bg-sidebar-hover"
       }`}
     >
       {isEditing ? (

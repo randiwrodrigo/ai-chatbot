@@ -55,7 +55,7 @@ export default function ModelSelector({
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-0 z-20 mb-2 w-72 overflow-hidden rounded-2xl border border-bg-300 bg-bg-100 p-1.5 shadow-2xl animate-fade-in">
+        <div className="absolute bottom-full left-0 z-20 mb-2 max-h-[min(24rem,45vh)] w-72 overflow-y-auto rounded-2xl border border-bg-300 bg-bg-100 p-1.5 shadow-2xl animate-fade-in">
           {AI_MODELS.map((m) => (
             <button
               key={m.id}

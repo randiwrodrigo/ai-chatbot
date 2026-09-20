@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowUp, Loader2, Plus } from "lucide-react";
+import { ArrowUp, Plus, Square } from "lucide-react";
 import type { ModelId } from "@/lib/models";
 import ModelSelector from "./ModelSelector";
 
 interface MessageInputProps {
   onSend: (message: string) => void;
+  onStop: () => void;
   isLoading: boolean;
   model: ModelId;
   loadedModelId: ModelId | null;
@@ -17,6 +18,7 @@ interface MessageInputProps {
 
 export default function MessageInput({
   onSend,
+  onStop,
   isLoading,
   model,
   loadedModelId,
@@ -91,22 +93,30 @@ export default function MessageInput({
               onSelect={onSelectModel}
             />
 
-            <button
-              onClick={handleSend}
-              disabled={!canSend}
-              aria-label="Send message"
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-colors ${
-                canSend
-                  ? "bg-accent text-bg-0 hover:bg-accent-hover"
-                  : "bg-accent/30 text-bg-0/60"
-              }`}
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
+            {isLoading ? (
+              <button
+                type="button"
+                onClick={onStop}
+                aria-label="Stop generating"
+                title="Stop generating"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent text-bg-0 transition-colors hover:bg-accent-hover"
+              >
+                <Square className="h-3.5 w-3.5 fill-current" />
+              </button>
+            ) : (
+              <button
+                onClick={handleSend}
+                disabled={!canSend}
+                aria-label="Send message"
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                  canSend
+                    ? "bg-accent text-bg-0 hover:bg-accent-hover"
+                    : "bg-accent/30 text-bg-0/60"
+                }`}
+              >
                 <ArrowUp className="h-4 w-4" />
-              )}
-            </button>
+              </button>
+            )}
           </div>
         </div>
       </div>

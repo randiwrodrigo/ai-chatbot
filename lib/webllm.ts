@@ -58,6 +58,10 @@ export async function loadWebLLMModel(
   }
 }
 
+export async function stopWebLLMGeneration(): Promise<void> {
+  await engine?.interruptGenerate();
+}
+
 export async function* streamWebLLMChat(
   messages: ChatCompletionMessageParam[],
 ): AsyncGenerator<string> {

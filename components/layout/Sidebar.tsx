@@ -122,7 +122,7 @@ export default function Sidebar({
           <button
             onClick={onClose}
             aria-label="Close sidebar"
-            className="rounded-lg p-2 text-text-300 hover:bg-bg-200"
+            className="rounded-lg p-2 text-text-300 hover:bg-bg-sidebar-hover"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -143,7 +143,7 @@ export default function Sidebar({
         <div className="flex-1 overflow-y-auto px-2 py-2">
           <button
             onClick={onNewChat}
-            className="mb-2 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-text-200 hover:bg-bg-200"
+            className="mb-2 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-text-200 hover:bg-bg-sidebar-hover"
           >
             <SquarePen className="h-4 w-4" />
             New chat
@@ -197,7 +197,7 @@ export default function Sidebar({
               <button
                 type="button"
                 onClick={() => setAccountMenuOpen((open) => !open)}
-                className="flex w-full items-center gap-3 rounded-xl p-2 hover:bg-bg-200"
+                className="flex w-full items-center gap-3 rounded-xl p-2 hover:bg-bg-sidebar-hover"
               >
                 {user.photoURL ? (
                   <img
@@ -248,6 +248,7 @@ export default function Sidebar({
         <SettingsModal
           initialTab={settingsTab}
           user={user}
+          conversations={conversations}
           loadedModelId={loadedModelId}
           cachedModelIds={cachedModelIds}
           isStreaming={isStreaming}
@@ -256,6 +257,7 @@ export default function Sidebar({
             setSettingsTab(null);
           }}
           onDeleteModel={onDeleteModel}
+          onDeleteConversation={onDeleteConversation}
           onClearConversations={onClearConversations}
           onProfileUpdated={onProfileUpdated}
           onLogout={() => {

@@ -2,6 +2,7 @@
 
 :root {
   --bg-sidebar: #181817;
+  --bg-sidebar-hover: #30302e;
   --bg-0: #212121;
   --bg-100: #262624;
   --bg-200: #30302e;
@@ -32,6 +33,7 @@
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     --bg-sidebar: #f0eee6;
+    --bg-sidebar-hover: #e5e3d9;
     --bg-0: #faf9f5;
     --bg-100: #ffffff;
     --bg-200: #f0eee6;
@@ -49,6 +51,7 @@
 /* Explicit choice always wins over the OS preference */
 :root[data-theme="light"] {
   --bg-sidebar: #f0eee6;
+  --bg-sidebar-hover: #e5e3d9;
   --bg-0: #faf9f5;
   --bg-100: #ffffff;
   --bg-200: #f0eee6;
@@ -64,6 +67,7 @@
 
 :root[data-theme="dark"] {
   --bg-sidebar: #181817;
+  --bg-sidebar-hover: #30302e;
   --bg-0: #212121;
   --bg-100: #262624;
   --bg-200: #30302e;
@@ -81,6 +85,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-bg-sidebar: var(--bg-sidebar);
+  --color-bg-sidebar-hover: var(--bg-sidebar-hover);
   --color-bg-0: var(--bg-0);
   --color-bg-100: var(--bg-100);
   --color-bg-200: var(--bg-200);

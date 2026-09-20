@@ -59,6 +59,10 @@ export default function ModelDownloadModal({
             <span>{isCached ? "Size on disk" : "Download size"}</span>
             <span className="font-medium text-text-100">{model.size}</span>
           </div>
+          <div className="mt-2 flex items-center justify-between">
+            <span>GPU memory needed</span>
+            <span className="font-medium text-text-100">{model.vram}</span>
+          </div>
         </div>
 
         {!webGpuSupported ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { Code2, GraduationCap, Home, PenLine } from "lucide-react";
 import Sidebar from "@/components/layout/Sidebar";
@@ -18,6 +18,7 @@ import {
   isModelCached,
   isWebGPUSupported,
   loadWebLLMModel,
+  stopWebLLMGeneration,
   streamWebLLMChat,
 } from "@/lib/webllm";
 import MessageInput from "./MessageInput";
@@ -59,6 +60,7 @@ export default function Chat() {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(
     null,
   );
+  const stopRequestedRef = useRef(false);
 
   const [cachedModelIds, setCachedModelIds] = useState<Set<ModelId>>(new Set());
   const [isRestoring, setIsRestoring] = useState(false);
@@ -161,6 +163,7 @@ export default function Chat() {
     conversationId: string,
   ) {
     let full = "";
+    stopRequestedRef.current = false;
     try {
       for await (const delta of streamWebLLMChat(
         history.map(({ role, content }) => ({ role, content })),
@@ -178,10 +181,18 @@ export default function Chat() {
       );
     } finally {
       setStreamingMessageId(null);
-      const finalMessages = [
-        ...history,
-        { id: assistantId, role: "assistant" as const, content: full },
-      ];
+      // Stopped before any text arrived: drop the empty reply instead of
+      // leaving a blank bubble (and a blank assistant turn in the history).
+      const stoppedEmpty = stopRequestedRef.current && !full;
+      if (stoppedEmpty) {
+        setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+      }
+      const finalMessages = stoppedEmpty
+        ? history
+        : [
+            ...history,
+            { id: assistantId, role: "assistant" as const, content: full },
+          ];
       const now = Date.now();
       upsertConversation((prev) =>
         prev.map((c) =>
@@ -234,6 +245,13 @@ export default function Chat() {
     });
 
     generateReply(assistantId, history, conversationId);
+  }
+
+  function handleStop() {
+    stopRequestedRef.current = true;
+    stopWebLLMGeneration().catch((err) => {
+      console.error("Failed to stop generation:", err);
+    });
   }
 
   function handleNewChat() {
@@ -354,6 +372,7 @@ export default function Chat() {
           <div className="w-full max-w-3xl">
             <MessageInput
               onSend={handleSend}
+              onStop={handleStop}
               isLoading={streamingMessageId !== null}
               model={model}
               loadedModelId={loadedModelId}
@@ -385,6 +404,7 @@ export default function Chat() {
           <footer className="border-t border-bg-300 p-4">
             <MessageInput
               onSend={handleSend}
+              onStop={handleStop}
               isLoading={streamingMessageId !== null}
               model={model}
               loadedModelId={loadedModelId}

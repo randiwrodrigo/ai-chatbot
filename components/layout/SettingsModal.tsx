@@ -2,23 +2,36 @@
 
 import { useState } from "react";
 import type { User } from "firebase/auth";
-import { CircleUserRound, Monitor, Moon, Settings, Store, Sun, X } from "lucide-react";
+import {
+  CircleUserRound,
+  Database,
+  Monitor,
+  Moon,
+  Settings,
+  Store,
+  Sun,
+  X,
+} from "lucide-react";
 import ModelStoreTab from "@/components/chat/ModelStoreTab";
+import type { Conversation } from "@/lib/conversations";
 import { getFontPreference, setFontPreference, type FontPreference } from "@/lib/font";
 import type { ModelId } from "@/lib/models";
 import { getThemePreference, setThemePreference, type ThemePreference } from "@/lib/theme";
+import DataStorageTab from "./DataStorageTab";
 import ProfileTab from "./ProfileTab";
 
-export type SettingsTab = "general" | "profile" | "model-store";
+export type SettingsTab = "general" | "profile" | "model-store" | "data-storage";
 
 interface SettingsModalProps {
   initialTab: SettingsTab;
   user: User;
+  conversations: Conversation[];
   loadedModelId: ModelId | null;
   cachedModelIds: Set<ModelId>;
   isStreaming: boolean;
   onSelectModel: (id: ModelId) => void;
   onDeleteModel: (id: ModelId) => Promise<void> | void;
+  onDeleteConversation: (id: string) => void;
   onClearConversations: () => void;
   onProfileUpdated: () => void;
   onLogout: () => void;
@@ -29,6 +42,7 @@ const TABS: { id: SettingsTab; label: string; icon: typeof Settings }[] = [
   { id: "general", label: "General", icon: Settings },
   { id: "profile", label: "Profile", icon: CircleUserRound },
   { id: "model-store", label: "Model Store", icon: Store },
+  { id: "data-storage", label: "Data & Storage", icon: Database },
 ];
 
 const THEME_OPTIONS: { id: ThemePreference; label: string; icon: typeof Sun }[] = [
@@ -50,18 +64,19 @@ const FONT_OPTIONS: { id: FontPreference; label: string; fontFamily: string }[] 
 export default function SettingsModal({
   initialTab,
   user,
+  conversations,
   loadedModelId,
   cachedModelIds,
   isStreaming,
   onSelectModel,
   onDeleteModel,
+  onDeleteConversation,
   onClearConversations,
   onProfileUpdated,
   onLogout,
   onClose,
 }: SettingsModalProps) {
   const [tab, setTab] = useState<SettingsTab>(initialTab);
-  const [confirmingClear, setConfirmingClear] = useState(false);
   const [themePref, setThemePref] = useState<ThemePreference>(() =>
     getThemePreference(),
   );
@@ -170,43 +185,6 @@ export default function SettingsModal({
                 </div>
               </div>
 
-              <div className="mt-4 rounded-xl border border-bg-300 p-4">
-                <p className="text-sm font-medium text-text-100">
-                  Conversation history
-                </p>
-                <p className="mt-1 text-sm text-text-400">
-                  Stored only in this browser. Clearing it can&apos;t be undone.
-                </p>
-                {confirmingClear ? (
-                  <div className="mt-3 flex gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setConfirmingClear(false)}
-                      className="flex-1 rounded-lg px-3 py-1.5 text-sm text-text-200 hover:bg-bg-200"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onClearConversations();
-                        setConfirmingClear(false);
-                      }}
-                      className="flex-1 rounded-lg bg-red-500/90 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500"
-                    >
-                      Clear all
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmingClear(true)}
-                    className="mt-3 rounded-lg border border-bg-300 px-3 py-1.5 text-sm text-text-200 hover:bg-bg-200"
-                  >
-                    Clear all conversations
-                  </button>
-                )}
-              </div>
             </div>
           )}
 
@@ -225,6 +203,16 @@ export default function SettingsModal({
               isStreaming={isStreaming}
               onSelect={onSelectModel}
               onDelete={onDeleteModel}
+            />
+          )}
+
+          {tab === "data-storage" && (
+            <DataStorageTab
+              conversations={conversations}
+              cachedModelIds={cachedModelIds}
+              onDeleteConversation={onDeleteConversation}
+              onClearConversations={onClearConversations}
+              onOpenModelStore={() => setTab("model-store")}
             />
           )}
         </div>
